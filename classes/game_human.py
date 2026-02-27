@@ -1,9 +1,13 @@
 import math
+import os
+import sys
 import tkinter as tk
 import pygame
 import copy
 from PIL import Image, ImageTk
 from tkinter import messagebox
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 cell_size = 80
 piece_size = 60
@@ -41,11 +45,19 @@ class Game_Human:
         root.bind('<Control-b>', self.black_surrender)
 
         # Create sound's effect
-        pygame.mixer.init()
-        self.move_check_sound = pygame.mixer.Sound('assets/audio/move_check.mp3')
-        self.move_self_sound = pygame.mixer.Sound('assets/audio/move_self.mp3')
-        self.start_sound = pygame.mixer.Sound('assets/audio/start.mp3')
-        self.end_sound = pygame.mixer.Sound('assets/audio/end.mp3')
+        class _DummySound:
+            def play(self): pass
+        try:
+            pygame.mixer.init()
+            self.move_check_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'move_check.mp3'))
+            self.move_self_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'move_self.mp3'))
+            self.start_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'start.mp3'))
+            self.end_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'end.mp3'))
+        except Exception:
+            self.move_check_sound = _DummySound()
+            self.move_self_sound = _DummySound()
+            self.start_sound = _DummySound()
+            self.end_sound = _DummySound()
 
         # Create a canvas to draw board
         self.canvas = tk.Canvas(self.root, width = WIDTH, height = HEIGHT, bg = dark_brown)
@@ -139,7 +151,7 @@ class Game_Human:
         images = {}
         for color in colors:
             for type in types:
-                path = f'assets/pictures/{color}_{type}.png'
+                path = os.path.join(BASE_DIR, 'assets', 'pictures', f'{color}_{type}.png')
                 try:
                     img = Image.open(path).resize((piece_size, piece_size))
                     images[f'{color}_{type}'] = ImageTk.PhotoImage(img)
@@ -222,11 +234,17 @@ class Game_Human:
         return False
 
     def complete_move(self, piece, row, col):
-        # Check if the game is over
-        self.is_the_game_over(row, col)
+        # Check if capturing a General → end game immediately
+        if self.board.grid[row][col] and self.board.grid[row][col].type == 'General':
+            self.move_piece(piece, row, col)
+            self.end_sound.play()
+            winner = 'Red' if self.turn == 'r' else 'Black'
+            messagebox.showinfo('Result', f'{winner} is the winner!')
+            self.root.quit()
+            return
 
         # Move the piece
-        self.move_piece(piece, row, col) 
+        self.move_piece(piece, row, col)
 
         self.turn = 'b' if self.turn == 'r' else 'r'
 
@@ -243,12 +261,6 @@ class Game_Human:
         else:
             self.move_self_sound.play()
 
-    def is_the_game_over(self, row, col):
-        if self.board.grid[row][col] and self.board.grid[row][col].type == 'General':  
-            self.end_sound.play()
-            winner = 'Red' if self.turn == 'r' else 'Black'
-            messagebox.showinfo('Result', f'{winner} is the winner!')
-            self.root.quit()
     
     def will_general_be_irradiated_after_transfer(self, piece, new_x, new_y):
         old_x, old_y = piece.x, piece.y
@@ -269,6 +281,8 @@ class Game_Human:
     def is_general_in_check(self, color):
         # Find the general's position
         general_pos = self.find_general(color)
+        if general_pos is None:
+            return False
         
         # Browse all enemy's pieces
         for i in range(10):
@@ -280,8 +294,12 @@ class Game_Human:
         return False
     
     def is_general_face_to_face(self):
-        r_x, r_y = self.find_general('r')
-        b_x, b_y = self.find_general('b')
+        r_pos = self.find_general('r')
+        b_pos = self.find_general('b')
+        if r_pos is None or b_pos is None:
+            return False
+        r_x, r_y = r_pos
+        b_x, b_y = b_pos
         if r_y != b_y:
             return False
         for i in range(b_x + 1, r_x):

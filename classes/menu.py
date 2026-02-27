@@ -1,7 +1,10 @@
+import os
 import tkinter as tk
 from PIL import Image, ImageTk
 from classes.game_human import Game_Human
 from classes.game_ai import Game_AI
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 WIDTH = 1200
 HEIGHT = 628
@@ -26,7 +29,7 @@ class Menu:
         root.geometry(f'{WIDTH}x{HEIGHT}+{x_position}+{y_position}')
 
         # Load background image
-        self.bg_image = Image.open('assets/pictures/menu.png')
+        self.bg_image = Image.open(os.path.join(BASE_DIR, 'assets', 'pictures', 'menu.png'))
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
 
         # Set background image

@@ -1,8 +1,11 @@
 import subprocess
+import sys
 import time
-# import random
+import os
 
-engine_path = '/home/mihari/CODE/Python/Xiangqi/pikafish_ai/Pikafish/src/pikafish'
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_engine_name = 'pikafish.exe' if sys.platform == 'win32' else 'pikafish'
+engine_path = os.path.join(BASE_DIR, 'pikafish_ai', 'Pikafish', 'src', _engine_name)
 
 class AI:
     def __init__(self, engine_path, level):

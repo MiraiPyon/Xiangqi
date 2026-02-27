@@ -1,10 +1,14 @@
 import math
+import os
+import sys
 import tkinter as tk
 import pygame
 import copy
 from PIL import Image, ImageTk
 from tkinter import messagebox
 from classes.ai import AI
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 cell_size = 80
 piece_size = 60
@@ -14,7 +18,8 @@ lemon_chiffon = '#FFFACD'
 WIDTH = 740
 HEIGHT = 820
 river_words = ['楚', '河', '漢', '界']
-engine_path = '/home/mihari/CODE/Python/Xiangqi/pikafish_ai/Pikafish/src/pikafish'
+_engine_name = 'pikafish.exe' if sys.platform == 'win32' else 'pikafish'
+engine_path = os.path.join(BASE_DIR, 'pikafish_ai', 'Pikafish', 'src', _engine_name)
 
 class Game_AI:
     def __init__(self, root, board, level):        
@@ -44,12 +49,21 @@ class Game_AI:
         root.bind('<Control-s>', self.surrender)
 
         # Create sound's effect
-        pygame.mixer.init()
-        self.move_check_sound = pygame.mixer.Sound('assets/audio/move_check.mp3')
-        self.move_self_sound = pygame.mixer.Sound('assets/audio/move_self.mp3')
-        self.start_sound = pygame.mixer.Sound('assets/audio/start.mp3')
-        self.end_sound = pygame.mixer.Sound('assets/audio/end.mp3')
-        self.another_end_sound = pygame.mixer.Sound('assets/audio/another_end.mp3') 
+        class _DummySound:
+            def play(self): pass
+        try:
+            pygame.mixer.init()
+            self.move_check_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'move_check.mp3'))
+            self.move_self_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'move_self.mp3'))
+            self.start_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'start.mp3'))
+            self.end_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'end.mp3'))
+            self.another_end_sound = pygame.mixer.Sound(os.path.join(BASE_DIR, 'assets', 'audio', 'another_end.mp3'))
+        except Exception:
+            self.move_check_sound = _DummySound()
+            self.move_self_sound = _DummySound()
+            self.start_sound = _DummySound()
+            self.end_sound = _DummySound()
+            self.another_end_sound = _DummySound()
 
         # Create a canvas to draw board
         self.canvas = tk.Canvas(self.root, width = WIDTH, height = HEIGHT, bg = dark_brown)
@@ -143,7 +157,7 @@ class Game_AI:
         images = {}
         for color in colors:
             for type in types:
-                path = f'assets/pictures/{color}_{type}.png'
+                path = os.path.join(BASE_DIR, 'assets', 'pictures', f'{color}_{type}.png')
                 try:
                     img = Image.open(path).resize((piece_size, piece_size))
                     images[f'{color}_{type}'] = ImageTk.PhotoImage(img)
@@ -220,12 +234,10 @@ class Game_AI:
 
     def complete_move(self, piece, row, col):
         # Move the piece
-        self.move_piece(piece, row, col) 
+        self.move_piece(piece, row, col)
 
         self.draw_board()
-        self.window = tk.Tk()
-        self.window.update()
-        self.window.destroy()
+        self.root.update()  # Force UI refresh while AI is thinking
 
         # AI's turn
         fen = self.grid_to_fen(self.board.grid)
@@ -250,11 +262,6 @@ class Game_AI:
         else:
             self.move_self_sound.play()
 
-    # def is_the_game_over(self, row, col):
-    #     if self.board.grid[row][col] and self.board.grid[row][col].type == 'General' and self.board.grid[row][col].color == 'b':
-    #         self.end_sound.play()
-    #         messagebox.showinfo('Result', f'You win! Congratulation!')
-    #         self.root.quit()
     
     def will_general_be_irradiated_after_transfer(self, piece, new_x, new_y):
         old_x, old_y = piece.x, piece.y
@@ -275,6 +282,8 @@ class Game_AI:
     def is_general_in_check(self, color):
         # Find the general's position
         general_pos = self.find_general(color)
+        if general_pos is None:
+            return False
         
         # Browse all enemy's pieces
         for i in range(10):
@@ -286,8 +295,12 @@ class Game_AI:
         return False
     
     def is_general_face_to_face(self):
-        r_x, r_y = self.find_general('r')
-        b_x, b_y = self.find_general('b')
+        r_pos = self.find_general('r')
+        b_pos = self.find_general('b')
+        if r_pos is None or b_pos is None:
+            return False
+        r_x, r_y = r_pos
+        b_x, b_y = b_pos
         if r_y != b_y:
             return False
         for i in range(b_x + 1, r_x):
