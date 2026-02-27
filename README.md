@@ -4,7 +4,8 @@ A Xiangqi game built with Python, featuring both **Human vs Human** and **Human 
 
 ## Screenshots
 
-> Coming soon
+![alt text](image.png)
+![Xiangqi game interface showing the board setup with red pieces at the bottom and black pieces at the top, separated by the river in the middle. The board displays the starting position with all pieces in place: chariots, horses, elephants, advisors, and generals in the back row, cannons in the second row, and soldiers in the third row.](image-1.png)
 
 ## Features
 
